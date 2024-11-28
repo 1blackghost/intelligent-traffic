@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Panel</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        /* Navbar */
+        .navbar {
+            background-color: #007bff;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+        }
+
+        .navbar .menu-icon {
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .navbar .title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            height: 100%;
+            width: 0;
+            position: fixed;
+            z-index: 1;
+            top: 0;
+            left: 0;
+            background-color: #111;
+            overflow-x: hidden;
+            transition: 0.5s;
+            padding-top: 60px;
+        }
+
+        .sidebar a {
+            padding: 8px 8px 8px 32px;
+            text-decoration: none;
+            font-size: 25px;
+            color: #818181;
+            display: block;
+            transition: 0.3s;
+        }
+
+        .sidebar a:hover {
+            color: #f1f1f1;
+        }
+
+        .sidebar .close-btn {
+            position: absolute;
+            top: 0;
+            right: 25px;
+            font-size: 36px;
+            margin-left: 50px;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        /* Video Feed */
+        .video-feed-container {
+            width: 80%;
+            max-width: 700px;
+            height: 400px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .video-feed {
+            width: 30%;
+            height: 100%;
+            background-color: #000;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        /* Traffic light dots */
+        .traffic-dot {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .red {
+            background-color: red;
+        }
+
+        .yellow {
+            background-color: yellow;
+            color: black;
+        }
+
+        .green {
+            background-color: green;
+        }
+
+        /* Timer */
+        .timer {
+            font-size: 20px;
+            color: #333;
+            margin-top: 10px;
+        }
+
+        /* Vehicle count */
+        .vehicle-count {
+            font-size: 18px;
+            margin-top: 20px;
+            color: #333;
+        }
+
+        /* Menu Button */
+        .menu-icon {
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Sidebar Menu -->
+    <div id="sidebar" class="sidebar">
+        <a href="javascript:void(0)" class="close-btn" onclick="closeMenu()">&times;</a>
+        <a href="#">Home</a>
+        <a href="#">About</a>
+        <a href="#">Logout</a>
+    </div>
+
+    <!-- Navbar -->
+    <div class="navbar">
+        <i class="fas fa-bars menu-icon" onclick="openMenu()"></i>
+        <div class="title">Traffic Control Panel</div>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="control-panel">
+        <!-- Timer Display -->
+        <label>Next Changes in: </label>
+        <div class="timer" id="timer">10</div>
+
+        <!-- Vehicle Count -->
+        <div class="vehicle-count">
+            <div id="lane1-count">Lane 1: 0 Vehicles</div>
+            <div id="lane2-count">Lane 2: 0 Vehicles</div>
+            <div id="lane3-count">Lane 3: 0 Vehicles</div>
+        </div>
+
+        <!-- Video Feed Containers -->
+        <div class="video-feed-container">
+            <!-- Lane 1 -->
+            <div class="video-feed" id="lane1-feed">
+                <img src="/stream/lane1" style="width: 100%; max-width: 600px;" />
+                <div class="traffic-dot red" id="dot-lane1"></div>
+            </div>
+
+            <!-- Lane 2 -->
+            <div class="video-feed" id="lane2-feed">
+                <img src="/stream/lane2" style="width: 100%; max-width: 600px;" />
+                <div class="traffic-dot yellow" id="dot-lane2"></div>
+            </div>
+
+            <!-- Lane 3 -->
+            <div class="video-feed" id="lane3-feed">
+                <img src="/stream/lane3" style="width: 100%; max-width: 600px;" />
+                <div class="traffic-dot green" id="dot-lane3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let checker=true;
+        let count=0;
+        let lane1Color = 'red';
+        let lane2Color = 'yellow';
+        let lane3Color = 'green';
+        let countdown = 10;
+        let timerInterval;
+        let vehicleCountInterval;
+
+        // Start the timer and ping every 2 seconds when the page is ready
+        $(document).ready(function() {
+            startCountdown();
+            vehicleCountInterval = setInterval(fetchVehicleCounts, 2000); // Ping every 2 seconds
+        });
+
+        // Fetch vehicle count from server every 2 seconds
+        function fetchVehicleCounts() {
+            $.get("/fetch", function (data) {
+                updateLaneColors(data);
+            });
+        }
+        function getCurrentLightColor(lane) {
+            // Fetch the current color of the lane's light dot (assuming the dot is a div or span)
+            var laneDot = document.querySelector(`#${lane}-dot`);
+            
+            // Check the background color of the dot or any other indicator of its color
+            var currentColor = window.getComputedStyle(laneDot).backgroundColor;
+            
+            // Return the color (this will give you the RGB value)
+            return currentColor;
+        }
+
+        // Update lane colors based on the vehicle counts
+        function updateLaneColors(vehicleCounts) {
+            let lane1Count = vehicleCounts.lane1;
+            let lane2Count = vehicleCounts.lane2;
+            let lane3Count = vehicleCounts.lane3;
+
+            // Update vehicle count display
+            $('#lane1-count').text('Lane 1: ' + lane1Count + ' Vehicles');
+            $('#lane2-count').text('Lane 2: ' + lane2Count + ' Vehicles');
+            $('#lane3-count').text('Lane 3: ' + lane3Count + ' Vehicles');
+
+            // Update traffic light colors based on vehicle counts
+            if (checker==true){
+                if (lane1Count >= lane2Count && lane1Count >= lane3Count) {
+                    lane1Color = 'green';
+                    lane2Color = 'yellow';
+                    lane3Color = 'red';
+                } else if (lane2Count >= lane1Count && lane2Count >= lane3Count) {
+                    lane2Color = 'green';
+                    lane1Color = 'yellow';
+                    lane3Color = 'red';
+                } else {
+                    lane3Color = 'green';
+                    lane1Color = 'yellow';
+                    lane2Color = 'red';
+                }
+                checker=false;
+            }
+            else{
+
+                let lane1Color = getCurrentLightColor('lane1'); // Get the current color of Lane 1
+                let lane2Color = getCurrentLightColor('lane2'); // Get the current color of Lane 2
+                let lane3Color = getCurrentLightColor('lane3'); // Get the current color of Lane 3
+
+                // Transition Logic for Lane 1
+                if (lane1Color === "green") {
+                    lane1Color = "yellow"; // Green -> Yellow
+                } else if (lane1Color === "yellow") {
+                    lane1Color = "green"; // Yellow -> Green
+                } else if (lane1Color === "red") {
+                    lane1Color = "yellow"; // Red -> Yellow
+                }
+
+                // Transition Logic for Lane 2
+                if (lane2Color === "green") {
+                    lane2Color = "yellow"; // Green -> Yellow
+                } else if (lane2Color === "yellow") {
+                    lane2Color = "green"; // Yellow -> Green
+                } else if (lane2Color === "red") {
+                    lane2Color = "yellow"; // Red -> Yellow
+                }
+
+                // Transition Logic for Lane 3
+                if (lane3Color === "green") {
+                    lane3Color = "yellow"; // Green -> Yellow
+                } else if (lane3Color === "yellow") {
+                    lane3Color = "green"; // Yellow -> Green
+                } else if (lane3Color === "red") {
+                    lane3Color = "yellow"; // Red -> Yellow
+                }
+                count=count+1;
+                if (count==3){
+                    checker=true;
+                }
+            }   
+
+            updateTrafficLights();
+        }
+
+        // Update traffic light dots based on lane colors
+        function updateTrafficLights() {
+            $('#dot-lane1').removeClass('red yellow green').addClass(lane1Color);
+            $('#dot-lane2').removeClass('red yellow green').addClass(lane2Color);
+            $('#dot-lane3').removeClass('red yellow green').addClass(lane3Color);
+        }
+
+        // Countdown timer function
+        function startCountdown() {
+            timerInterval = setInterval(function () {
+                countdown--;
+                $('#timer').text(countdown);
+
+                if (countdown <= 0) {
+                    countdown = 10;  // Reset the countdown to 10 seconds
+                    $('#timer').text(countdown);
+                }
+            }, 1000);
+        }
+
+        // Open and close the sidebar
+        function openMenu() {
+            document.getElementById("sidebar").style.width = "250px";
+        }
+
+        function closeMenu() {
+            document.getElementById("sidebar").style.width = "0";
+        }
+    </script>
+</body>
+</html>
