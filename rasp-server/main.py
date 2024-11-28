@@ -113,7 +113,7 @@ def stream_lane3():
     return Response(generate_video_stream(cap_lane3,"3"),
                     mimetype="multipart/x-mixed-replace; boundary=frame")
 
-'''
+
 import RPi.GPIO as GPIO
 import time
 
@@ -155,6 +155,6 @@ def set_lights():
         return jsonify({"status": "Success, lights updated"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-'''
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000,debug=True)

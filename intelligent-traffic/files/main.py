@@ -5,7 +5,7 @@ import cv2
 from ultralytics import YOLO  # Import YOLO from ultralytics package
 
 # Set your URL for controlling the traffic lights
-url = 'http://127.0.0.1:5000/'
+url = 'http://192.168.33.1:5000/'
 
 # Load YOLOv8 model
 model = YOLO('yolov8s.pt')  # Specify YOLOv8 model file
@@ -35,7 +35,7 @@ def find_and_count_vehicles(frame, lane_number):
 def set_lights(light_config):
     try:
         lights_data = {"lights": light_config}
-        response = requests.post(url+"set-lights/", json=lights_data)
+        response = requests.post(url+"set-lights", json=lights_data)
 
         if response.status_code == 200:
             print("Lights set successfully")
@@ -89,9 +89,9 @@ def rotate_lights(lights_config):
 
 # Main function to control the traffic system
 def control_traffic():
-    lane_videos = [cv2.VideoCapture("http://localhost:5000/stream/lane1"),  # Stream URLs from server
-                   cv2.VideoCapture("http://localhost:5000/stream/lane2"),
-                   cv2.VideoCapture("http://localhost:5000/stream/lane3")]
+    lane_videos = [cv2.VideoCapture(url+"/stream/lane1"),  # Stream URLs from server
+                   cv2.VideoCapture(url+"/stream/lane2"),
+                   cv2.VideoCapture(url+"/stream/lane3")]
 
     lane_counts = [0, 0, 0]
     frame_id = 0
@@ -106,7 +106,7 @@ def control_traffic():
                 print("End of video feed or error reading frames.")
                 return
             lane_frames.append(frame)
-
+        time.sleep(2)
         # Count vehicles in each lane
         lane_counts[0] = find_and_count_vehicles(lane_frames[0],1)
         lane_counts[1] = find_and_count_vehicles(lane_frames[1],2)
