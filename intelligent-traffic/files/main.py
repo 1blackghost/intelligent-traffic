@@ -4,7 +4,7 @@ import pandas as pd
 import cv2
 from ultralytics import YOLO  
 
-url = 'http://127.0.0.1:5000/'
+url = 'http://192.168.33.1:5000/'
 
 model = YOLO('yolov8s.pt')  
 def find_and_count_vehicles(frame, lane_number):
