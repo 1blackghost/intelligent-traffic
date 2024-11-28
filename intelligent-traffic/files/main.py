@@ -4,7 +4,7 @@ import pandas as pd
 import cv2
 from ultralytics import YOLO  
 
-url = 'http://192.168.33.1:5000/'
+url = 'http://127.0.0.1:5000/'
 
 model = YOLO('yolov8s.pt')  
 def find_and_count_vehicles(frame, lane_number):
@@ -121,13 +121,16 @@ def control_traffic():
             print("Setting lights failed!")
 
         time.sleep(3)
-        set_lights(next_lights_config)
 
-        time.sleep(1)
         frame_id += 1
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+        for i in range(3):
+            next_lights_config = rotate_lights(next_lights_config)
+            print_lights_status(next_lights_config)
+            set_lights(next_lights_config)
+            time.sleep(10)
 
     for cap in lane_videos:
         cap.release()

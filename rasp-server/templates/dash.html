@@ -180,119 +180,99 @@
     </div>
 
     <script>
-        let checker=true;
-        let count=0;
-        let lane1Color = 'red';
-        let lane2Color = 'yellow';
-        let lane3Color = 'green';
-        let countdown = 10;
-        let timerInterval;
-        let vehicleCountInterval;
-
-        $(document).ready(function() {
-            startCountdown();
-            vehicleCountInterval = setInterval(fetchVehicleCounts, 2000); 
-        });
-
-        function fetchVehicleCounts() {
-            $.get("/fetch", function (data) {
-                updateLaneColors(data);
-            });
-        }
-        function getCurrentLightColor(lane) {
-            var laneDot = document.querySelector(`#${lane}-dot`);
-            var currentColor = window.getComputedStyle(laneDot).backgroundColor;
-            return currentColor;
+document.addEventListener("DOMContentLoaded", function () {
+    /**
+     * Updates traffic light colors based on the provided matrix.
+     * @param {Object} matrix - The lights data fetched from the server.
+     */
+    function updateLightsFromMatrix(matrix) {
+        if (!matrix || !matrix.lane1 || !Array.isArray(matrix.lane1)) {
+            console.error("Invalid lights matrix format:", matrix);
+            return;
         }
 
-        function updateLaneColors(vehicleCounts) {
-            let lane1Count = vehicleCounts.lane1;
-            let lane2Count = vehicleCounts.lane2;
-            let lane3Count = vehicleCounts.lane3;
+        const lights = matrix.lane1; // Extract the 2D array of lights
+        if (lights.length !== 3 || lights.some(lane => lane.length !== 3)) {
+            console.error("Invalid lane data in lights matrix:", lights);
+            return;
+        }
 
-            $('#lane1-count').text('Lane 1: ' + lane1Count + ' Vehicles');
-            $('#lane2-count').text('Lane 2: ' + lane2Count + ' Vehicles');
-            $('#lane3-count').text('Lane 3: ' + lane3Count + ' Vehicles');
+        // Update traffic lights for each lane
+        ['lane1', 'lane2', 'lane3'].forEach((lane, idx) => {
+            const [red, yellow, green] = lights[idx];
+            const dot = document.querySelector(`#dot-${lane}`); // Assuming elements have IDs like dot-lane1, dot-lane2, etc.
 
-            if (checker==true){
-                if (lane1Count >= lane2Count && lane1Count >= lane3Count) {
-                    lane1Color = 'green';
-                    lane2Color = 'yellow';
-                    lane3Color = 'red';
-                } else if (lane2Count >= lane1Count && lane2Count >= lane3Count) {
-                    lane2Color = 'green';
-                    lane1Color = 'yellow';
-                    lane3Color = 'red';
-                } else {
-                    lane3Color = 'green';
-                    lane1Color = 'yellow';
-                    lane2Color = 'red';
-                }
-                checker=false;
+            if (!dot) {
+                console.warn(`Element for ${lane} not found.`);
+                return;
             }
-            else{
 
-                let lane1Color = getCurrentLightColor('lane1'); 
-                let lane2Color = getCurrentLightColor('lane2'); 
-                let lane3Color = getCurrentLightColor('lane3'); 
+            // Reset colors
+            dot.classList.remove('red', 'yellow', 'green');
 
-                if (lane1Color === "green") {
-                    lane1Color = "yellow"; 
-                } else if (lane1Color === "yellow") {
-                    lane1Color = "green"; 
-                } else if (lane1Color === "red") {
-                    lane1Color = "yellow"; 
+            // Set the color based on the light matrix
+            if (red === 1) dot.classList.add('red');
+            if (yellow === 1) dot.classList.add('yellow');
+            if (green === 1) dot.classList.add('green');
+        });
+    }
+
+    /**
+     * Updates vehicle count on the UI.
+     */
+     function updateVehicleCounts(vehicleData) {
+        console.log(vehicleData); // Debugging to check fetched data
+        ['lane1', 'lane2', 'lane3'].forEach(lane => {
+            const countElement = document.querySelector(`#${lane}-count`);
+            if (countElement) {
+                countElement.textContent = `${lane.charAt(0).toUpperCase() + lane.slice(1)}: ${vehicleData[lane] || 0} Vehicles`;
+            }
+        });
+    }
+
+    /**
+     * Fetches the lights matrix from the server and updates the lights.
+     */
+    function fetchAndUpdateLights() {
+        fetch("/fetch_lights")
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to fetch lights data: " + response.statusText);
                 }
+                return response.json();
+            })
+            .then(data => {
+                updateLightsFromMatrix(data);
+            })
+            .catch(error => {
+                console.error("Error fetching or updating lights:", error);
+            });
+    }
 
-                if (lane2Color === "green") {
-                    lane2Color = "yellow"; 
-                } else if (lane2Color === "yellow") {
-                    lane2Color = "green"; 
-                } else if (lane2Color === "red") {
-                    lane2Color = "yellow"; 
-                }
+    /**
+     * Fetches the vehicle count from the server and updates the count display.
+     */
+     function fetchAndUpdateVehicleCounts() {
+        fetch("/fetch")
+            .then(response => response.json())
+            .then(data => updateVehicleCounts(data))
+            .catch(console.error);
+    }
+    /**
+     * Periodically fetch and update both lights and vehicle counts.
+     */
+    function initializeFetchIntervals() {
+        setInterval(() => {
+            fetchAndUpdateLights();
+            fetchAndUpdateVehicleCounts();
+        }, 2000); // Fetch every 2 seconds
+    }
 
-                if (lane3Color === "green") {
-                    lane3Color = "yellow"; 
-                } else if (lane3Color === "yellow") {
-                    lane3Color = "green"; 
-                } else if (lane3Color === "red") {
-                    lane3Color = "yellow";
-                }
-                count=count+1;
-                if (count==3){
-                    checker=true;
-                }
-            }   
+    // Initialize fetching and updating intervals
+    initializeFetchIntervals();
+});
 
-            updateTrafficLights();
-        }
 
-        function updateTrafficLights() {
-            $('#dot-lane1').removeClass('red yellow green').addClass(lane1Color);
-            $('#dot-lane2').removeClass('red yellow green').addClass(lane2Color);
-            $('#dot-lane3').removeClass('red yellow green').addClass(lane3Color);
-        }
-
-        function startCountdown() {
-            timerInterval = setInterval(function () {
-                countdown--;
-                $('#timer').text(countdown);
-
-                if (countdown <= 0) {
-                    countdown = 10;  
-                    $('#timer').text(countdown);
-                }
-            }, 1000);
-        }
-
-        function openMenu() {
-            document.getElementById("sidebar").style.width = "250px";
-        }
-
-        function closeMenu() {
-            document.getElementById("sidebar").style.width = "0";
-        }
     </script>
 </body>
 </html>

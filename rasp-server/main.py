@@ -4,6 +4,7 @@ import time
 
 app = Flask(__name__)
 app.secret_key = "1234"
+lights=[[0,1,0],[1,0,0],[0,0,1]]
 data = [
     [0, 0, 0] 
 ]
@@ -13,8 +14,8 @@ lanes = {
     'lane3': {'red': 5, 'yellow': 6, 'green': 13},
 }
 
-VALID_USERNAME = "a"
-VALID_PASSWORD = "a"
+VALID_USERNAME = "admin"
+VALID_PASSWORD = "admin"
 
 @app.route("/fetch")
 def fetch():
@@ -27,6 +28,14 @@ def fetch():
     }
     print(vehicle_data)
     return jsonify(vehicle_data)
+@app.route("/fetch_lights")
+def light_fetch():
+    global lights
+    
+    light_data = {
+        "lane1": lights
+    }
+    return jsonify(light_data)
 @app.route("/")
 def login_page():
     return render_template("index.html")
@@ -48,9 +57,9 @@ def control_panel():
     if "user" in session:
         return render_template("dash.html")
 
-cap_lane1 = cv2.VideoCapture("1.mp4")  
-cap_lane2 = cv2.VideoCapture("2.mp4")
-cap_lane3 = cv2.VideoCapture("3.mp4")
+cap_lane1 = cv2.VideoCapture("lane1.mp4")  
+cap_lane2 = cv2.VideoCapture("lane2.mp4")
+cap_lane3 = cv2.VideoCapture("lane3.mp4")
 
 def generate_video_stream(capture_device, lane):
     """Function to generate video stream from a video capture device (OpenCV)"""
@@ -64,7 +73,7 @@ def generate_video_stream(capture_device, lane):
         if not ret:
             print(f"Error reading video for Lane {lane}")
             break
-        
+        time.sleep(0.5)
         ret, jpeg = cv2.imencode('.jpg', frame)
         if not ret:
             print(f"Error encoding frame for Lane {lane}")
@@ -104,8 +113,7 @@ def stream_lane3():
     """Video stream for lane 3"""
     return Response(generate_video_stream(cap_lane3,"3"),
                     mimetype="multipart/x-mixed-replace; boundary=frame")
-
-
+'''
 import RPi.GPIO as GPIO
 import time
 
@@ -134,6 +142,8 @@ def control_lights(lights_matrix):
 def set_lights():
     try:
         lights_matrix = request.json['lights']
+        global lights
+        lights=lights_matrix
         
         if len(lights_matrix) != 3 or any(len(lane) != 3 for lane in lights_matrix):
             return jsonify({"error": "Invalid array format. Must be 3x3."}), 400
@@ -143,6 +153,6 @@ def set_lights():
         return jsonify({"status": "Success, lights updated"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
+'''
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000,debug=True)
