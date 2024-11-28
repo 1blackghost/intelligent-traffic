@@ -1,26 +1,23 @@
 import RPi.GPIO as GPIO
 import time
 
-# Pin setup
 pins = [14,15,26,23,24,25,5,6,13]
-# Set up the GPIO mode
 
 
 try:
     for i in pins:
         print(i)
-        GPIO.setmode(GPIO.BCM)  # Use Broadcom pin-numbering
-        GPIO.setup(i, GPIO.OUT)  # Set GPIO 14 as an output pin
-        GPIO.output(i, GPIO.HIGH)  # Turn on the LED
+        GPIO.setmode(GPIO.BCM) 
+        GPIO.setup(i, GPIO.OUT) 
+        GPIO.output(i, GPIO.HIGH) 
         print("LED ON")
-        time.sleep(1)  # Wait for 1 second
+        time.sleep(1) 
 
-        GPIO.output(i, GPIO.LOW)  # Turn off the LED
+        GPIO.output(i, GPIO.LOW) 
         print("LED OFF")
-        time.sleep(1)  # Wait for 1 second
+        time.sleep(1) 
 
 except KeyboardInterrupt:
-    # Clean up GPIO on CTRL+C exit
     GPIO.cleanup()
 
 except Exception as e:
@@ -28,5 +25,4 @@ except Exception as e:
     GPIO.cleanup()
 
 finally:
-    # Clean up GPIO on normal exit
     GPIO.cleanup()

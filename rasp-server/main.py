@@ -7,7 +7,6 @@ app.secret_key = "1234"
 data = [
     [0, 0, 0] 
 ]
-# GPIO pin configuration for each lane
 lanes = {
     'lane1': {'red': 14, 'yellow': 15, 'green': 26},
     'lane2': {'red': 23, 'yellow': 24, 'green': 25},
@@ -22,9 +21,9 @@ def fetch():
     global data
     
     vehicle_data = {
-        "lane1": data[0][0],  # Example count for Lane 1
-        "lane2": data[0][1],  # Example count for Lane 2
-        "lane3":data[0][2]   # Example count for Lane 3
+        "lane1": data[0][0],  
+        "lane2": data[0][1],  
+        "lane3":data[0][2] 
     }
     print(vehicle_data)
     return jsonify(vehicle_data)
@@ -49,8 +48,7 @@ def control_panel():
     if "user" in session:
         return render_template("dash.html")
 
-# OpenCV video capture for each lane
-cap_lane1 = cv2.VideoCapture("1.mp4")  # replace with actual video paths
+cap_lane1 = cv2.VideoCapture("1.mp4")  
 cap_lane2 = cv2.VideoCapture("2.mp4")
 cap_lane3 = cv2.VideoCapture("3.mp4")
 
@@ -59,23 +57,19 @@ def generate_video_stream(capture_device, lane):
     while True:
         ret, frame = capture_device.read()
         
-        # If the video stream reaches the end, reset it to the beginning
         if not ret:
-            capture_device.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Reset to the first frame
-            ret, frame = capture_device.read()  # Try reading the first frame again
+            capture_device.set(cv2.CAP_PROP_POS_FRAMES, 0)  
+            ret, frame = capture_device.read()  
 
-        # If the frame is still not available after resetting
         if not ret:
             print(f"Error reading video for Lane {lane}")
             break
         
-        # Encode the frame in JPEG format
         ret, jpeg = cv2.imencode('.jpg', frame)
         if not ret:
             print(f"Error encoding frame for Lane {lane}")
             break
 
-        # Yield the frame in MJPEG format for streaming
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
 
@@ -83,12 +77,10 @@ def generate_video_stream(capture_device, lane):
 @app.route('/data', methods=['POST'])
 def handle_data():
     try:
-        # Parse the incoming JSON data
         global data
         data = request.json['data']
         print("Received data:", data)
         
-        # Process the data here (if necessary)
 
         return jsonify({"status": "Success, lights updated"}), 200
     except Exception as e:
@@ -118,14 +110,13 @@ import RPi.GPIO as GPIO
 import time
 
 
-# Setup GPIO mode
 GPIO.setmode(GPIO.BCM)
 
 @app.route("/")
 def login():
     return render_template("index.html")
 
-# Setup GPIO pins as output
+
 for lane in lanes.values():
     for color, pin in lane.items():
         GPIO.setup(pin, GPIO.OUT)
@@ -142,14 +133,11 @@ def control_lights(lights_matrix):
 @app.route('/set-lights', methods=['POST'])
 def set_lights():
     try:
-        # Get the 2D array from the POST request
         lights_matrix = request.json['lights']
         
-        # Ensure it's a valid array for 3 lanes
         if len(lights_matrix) != 3 or any(len(lane) != 3 for lane in lights_matrix):
             return jsonify({"error": "Invalid array format. Must be 3x3."}), 400
         
-        # Control the traffic lights based on the input
         control_lights(lights_matrix)
         
         return jsonify({"status": "Success, lights updated"}), 200
