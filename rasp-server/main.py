@@ -1,9 +1,10 @@
-from flask import Flask, request, jsonify, render_template, session, Response
+from flask import Flask, request, jsonify, render_template, session, Response,redirect,url_for
 import cv2
 import time
 
 app = Flask(__name__)
 app.secret_key = "1234"
+started=False
 lights=[[0,1,0],[1,0,0],[0,0,1]]
 data = [
     [0, 0, 0] 
@@ -16,6 +17,61 @@ lanes = {
 
 VALID_USERNAME = "admin"
 VALID_PASSWORD = "admin"
+
+COLOR_RGB = {
+    "red": [255, 0, 0],      
+    "yellow": [255, 255, 0], 
+    "green": [0, 255, 0],    
+}
+
+@app.route('/manual', methods=['POST'])
+def manual_control():
+    data = request.get_json()
+    global lights
+    global started
+    lane1_color = data.get('lane1')
+    lane2_color = data.get('lane2')
+    lane3_color = data.get('lane3')
+    l=[]
+    if lane1_color=="red":
+        lane1=[1,0,0]
+    if lane1_color=="yellow":
+        lane1=[0,1,0]
+    if lane1_color=="green":
+        lane1=[0,0,1]
+    if lane2_color=="red":
+        lane2=[1,0,0]
+    if lane2_color=="yellow":
+        lane2=[0,1,0]
+    if lane2_color=="green":
+        lane2=[0,0,1]
+    if lane3_color=="red":
+        lane3=[1,0,0]
+    if lane3_color=="yellow":
+        lane1=[0,1,0]
+    if lane3_color=="green":
+        lane3=[0,0,1]
+    l.append(lane1)
+    l.append(lane2)
+    l.append(lane3)
+    lights=l
+    print(lights)
+    set_lights()
+    return jsonify({'lights': lights})
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login_page"))
+@app.route("/start")
+def start():
+    global started
+    if not started:
+        started=True
+        return {"status":"started"},200
+    else:
+        started=False
+        return {"status":"stopped"},200
 
 @app.route("/fetch")
 def fetch():
@@ -140,19 +196,22 @@ def control_lights(lights_matrix):
 
 @app.route('/set-lights', methods=['POST'])
 def set_lights():
-    try:
-        lights_matrix = request.json['lights']
-        global lights
-        lights=lights_matrix
-        
-        if len(lights_matrix) != 3 or any(len(lane) != 3 for lane in lights_matrix):
-            return jsonify({"error": "Invalid array format. Must be 3x3."}), 400
-        
-        control_lights(lights_matrix)
-        
-        return jsonify({"status": "Success, lights updated"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    if started==True:
+        try:
+            lights_matrix = request.json['lights']
+            global lights
+            lights=lights_matrix
+            
+            if len(lights_matrix) != 3 or any(len(lane) != 3 for lane in lights_matrix):
+                return jsonify({"error": "Invalid array format. Must be 3x3."}), 400
+            
+            control_lights(lights_matrix)
+            
+            return jsonify({"status": "Success, lights updated"}), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    else:
+        return "pode",500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000,debug=True)
